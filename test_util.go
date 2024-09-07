@@ -130,6 +130,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	sqlDB, _ := db.DB()
 	sqlDB.SetMaxIdleConns(1)
 	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetConnMaxLifetime(1)
 	sqlDB.SetConnMaxIdleTime(1)
 	return db, nil, cfg.FormatDSN()
 }
