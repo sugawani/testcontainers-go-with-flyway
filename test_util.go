@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
@@ -130,7 +131,6 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	sqlDB, _ := db.DB()
 	sqlDB.SetMaxIdleConns(1)
 	sqlDB.SetMaxOpenConns(1)
-	sqlDB.SetConnMaxLifetime(1)
-	sqlDB.SetConnMaxIdleTime(1)
+	sqlDB.SetConnMaxLifetime(10 * time.Second)
 	return db, nil, cfg.FormatDSN()
 }
