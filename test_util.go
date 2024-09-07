@@ -22,7 +22,7 @@ var (
 	flywayImage     = "flyway/flyway:10.17.1"
 )
 
-func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
+func NewTestDB(ctx context.Context) (*gorm.DB, func(), string) {
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
 		panic(err)
@@ -37,12 +37,12 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 		panic(err)
 	}
 
-	db, err := createDBConnection(ctx, mysqlC)
+	db, err, dsn := createDBConnection(ctx, mysqlC)
 	if err != nil {
 		panic(err)
 	}
 
-	return db, cleanupFunc
+	return db, cleanupFunc, dsn
 }
 
 func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
@@ -104,14 +104,14 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 	return err
 }
 
-func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
+func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error, string) {
 	host, err := mysqlC.Host(ctx)
 	if err != nil {
-		return nil, err
+		return nil, err, ""
 	}
 	port, err := mysqlC.MappedPort(ctx, dbPortNat)
 	if err != nil {
-		return nil, err
+		return nil, err, ""
 	}
 	cfg := mysql.Config{
 		DBName:    dbName,
@@ -122,11 +122,11 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	}
 	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
 	if err != nil {
-		return nil, err
+		return nil, err, ""
 	}
 	sqlDB, _ := db.DB()
 	sqlDB.SetMaxIdleConns(1)
 	sqlDB.SetMaxOpenConns(1)
 	sqlDB.SetConnMaxIdleTime(1)
-	return db, nil
+	return db, nil, cfg.FormatDSN()
 }

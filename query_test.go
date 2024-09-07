@@ -32,7 +32,7 @@ func Test_Query(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
-			db, cleanup := NewTestDB(ctx)
+			db, cleanup, _ := NewTestDB(ctx)
 			t.Cleanup(cleanup)
 
 			tt.createFunc(db)
