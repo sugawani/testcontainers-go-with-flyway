@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
@@ -13,12 +12,6 @@ import (
 	mysql2 "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
-type StdoutLogConsumer struct{}
-
-func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
-	fmt.Print(string(l.Content))
-}
 
 var (
 	dbContainerName = "mysqldb"
@@ -100,10 +93,6 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 				},
 			},
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
-			},
 		},
 		Started: true,
 	})
