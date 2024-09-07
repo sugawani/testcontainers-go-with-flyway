@@ -135,5 +135,9 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	if err != nil {
 		return nil, err
 	}
+	sqlDB, _ := db.DB()
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetConnMaxIdleTime(1)
 	return db, nil
 }
