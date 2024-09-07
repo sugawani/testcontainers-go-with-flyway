@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
@@ -23,6 +25,7 @@ var (
 )
 
 func NewTestDB(ctx context.Context) (*gorm.DB, func(), string) {
+	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
 		panic(err)
