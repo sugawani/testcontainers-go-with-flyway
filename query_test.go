@@ -20,8 +20,12 @@ func Test_Query(t *testing.T) {
 		want       *User
 		assertErr  assert.ErrorAssertionFunc
 	}{
-		"user exists":     {createFunc: createUser, want: &User{ID: 1, Name: "name"}, assertErr: assert.NoError},
-		"user not exists": {createFunc: func(*gorm.DB) {}, want: nil, assertErr: wantErrAssertFunc},
+		"user exists":      {createFunc: createUser, want: &User{ID: 1, Name: "name"}, assertErr: assert.NoError},
+		"user exists2":     {createFunc: createUser, want: &User{ID: 1, Name: "name"}, assertErr: assert.NoError},
+		"user exists3":     {createFunc: createUser, want: &User{ID: 1, Name: "name"}, assertErr: assert.NoError},
+		"user not exists":  {createFunc: func(*gorm.DB) {}, want: nil, assertErr: wantErrAssertFunc},
+		"user not exists2": {createFunc: func(*gorm.DB) {}, want: nil, assertErr: wantErrAssertFunc},
+		"user not exists3": {createFunc: func(*gorm.DB) {}, want: nil, assertErr: wantErrAssertFunc},
 	}
 
 	for name, tt := range cases {
