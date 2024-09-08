@@ -24,7 +24,7 @@ var (
 	flywayImage     = "flyway/flyway:10.17.1"
 )
 
-func NewTestDB(ctx context.Context) (*gorm.DB, func(), string) {
+func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
@@ -40,12 +40,12 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func(), string) {
 		panic(err)
 	}
 
-	db, err, dsn := createDBConnection(ctx, mysqlC)
+	db, err := createDBConnection(ctx, mysqlC)
 	if err != nil {
 		panic(err)
 	}
 
-	return db, cleanupFunc, dsn
+	return db, cleanupFunc
 }
 
 func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
@@ -62,7 +62,6 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 			NetworkAliases: map[string][]string{
 				networkName: {dbContainerName},
 			},
-			//WaitingFor: wait.ForListeningPort(dbPortNat),
 			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server"),
 		},
 		Started: true,
@@ -108,14 +107,16 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 	return err
 }
 
-func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error, string) {
+func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
 	host, err := mysqlC.Host(ctx)
 	if err != nil {
-		return nil, err, ""
+		fmt.Println("Get MySQL Host Error", err)
+		return nil, err
 	}
 	port, err := mysqlC.MappedPort(ctx, dbPortNat)
 	if err != nil {
-		return nil, err, ""
+		fmt.Println("Get MySQL Port Error", err)
+		return nil, err
 	}
 	cfg := mysql.Config{
 		DBName:    dbName,
@@ -126,11 +127,12 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	}
 	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
 	if err != nil {
-		return nil, err, ""
+		fmt.Println("Open MySQL Error", err)
+		return nil, err
 	}
 	//sqlDB, _ := db.DB()
 	//sqlDB.SetMaxIdleConns(1)
 	//sqlDB.SetMaxOpenConns(1)
 	//sqlDB.SetConnMaxLifetime(time.Second)
-	return db, nil, cfg.FormatDSN()
+	return db, nil
 }

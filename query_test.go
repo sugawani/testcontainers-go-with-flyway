@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,8 +32,7 @@ func Test_Query(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
-			db, cleanup, dsn := NewTestDB(ctx)
-			fmt.Printf("name: %s, dsn: %s\n", name, dsn)
+			db, cleanup := NewTestDB(ctx)
 			t.Cleanup(cleanup)
 
 			tt.createFunc(db)
