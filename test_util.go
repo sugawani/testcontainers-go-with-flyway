@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
@@ -125,7 +126,14 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
+	var db *gorm.DB
+	err = backoff.Retry(func() error {
+		db, err = gorm.Open(mysql2.Open(cfg.FormatDSN()))
+		if err != nil {
+			return err
+		}
+		return nil
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		fmt.Println("Open MySQL Error", err)
 		return nil, err
