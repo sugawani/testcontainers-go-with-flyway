@@ -12,10 +12,10 @@ func Test_Mutate(t *testing.T) {
 	cases := map[string]struct {
 		want *User
 	}{
-		"create user":  {want: &User{ID: 1, Name: "created user"}},
-		"create user2": {want: &User{ID: 1, Name: "created user"}},
-		"create user3": {want: &User{ID: 1, Name: "created user"}},
-		"create user4": {want: &User{ID: 1, Name: "created user"}},
+		"create user":  {want: &User{ID: 1, Name: "created user1"}},
+		"create user2": {want: &User{ID: 1, Name: "created user2"}},
+		"create user3": {want: &User{ID: 1, Name: "created user3"}},
+		"create user4": {want: &User{ID: 1, Name: "created user4"}},
 	}
 
 	for name, tt := range cases {
@@ -27,7 +27,7 @@ func Test_Mutate(t *testing.T) {
 			t.Cleanup(cleanup)
 
 			m := NewMutate(db)
-			actual, err := m.Execute("created user")
+			actual, err := m.Execute(tt.want.Name)
 			assert.Equal(t, tt.want, actual)
 			assert.NoError(t, err)
 		})
