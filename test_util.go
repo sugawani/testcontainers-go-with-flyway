@@ -49,8 +49,14 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string) {
 	if err != nil {
 		panic(err)
 	}
+	cleanupF := func() {
+		cleanupFunc()
+		if err = containerNetwork.Remove(ctx); err != nil {
+			panic(err)
+		}
+	}
 
-	return db, cleanupFunc, containerNetwork.Name, dsn
+	return db, cleanupF, containerNetwork.Name, dsn
 }
 
 func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
