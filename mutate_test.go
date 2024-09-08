@@ -23,7 +23,7 @@ func Test_Mutate(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
 			db, cleanup, nw, dsn := NewTestDB(ctx)
-			fmt.Printf("test: %s, network name: %s, dsn: %s\n", name, nw, dsn)
+			fmt.Printf("test: %s, network name: %s, dsn: %s db: %p\n", name, nw, dsn, db)
 			t.Cleanup(cleanup)
 
 			m := NewMutate(db)
