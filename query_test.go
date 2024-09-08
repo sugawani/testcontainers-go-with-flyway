@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +12,7 @@ func Test_Query(t *testing.T) {
 	createUser := func(db *gorm.DB) {
 		db.Create(&User{ID: 1, Name: "name"})
 	}
+	noCreateUser := func(db *gorm.DB) {}
 	wantErrAssertFunc := func(t assert.TestingT, err error, i ...interface{}) bool {
 		return assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	}
@@ -24,30 +24,23 @@ func Test_Query(t *testing.T) {
 		"user exists":      {createFunc: createUser, want: &User{ID: 1, Name: "name"}, assertErr: assert.NoError},
 		"user exists2":     {createFunc: createUser, want: &User{ID: 1, Name: "name"}, assertErr: assert.NoError},
 		"user exists3":     {createFunc: createUser, want: &User{ID: 1, Name: "name"}, assertErr: assert.NoError},
-		"user not exists":  {createFunc: func(*gorm.DB) {}, want: nil, assertErr: wantErrAssertFunc},
-		"user not exists2": {createFunc: func(*gorm.DB) {}, want: nil, assertErr: wantErrAssertFunc},
-		"user not exists3": {createFunc: func(*gorm.DB) {}, want: nil, assertErr: wantErrAssertFunc},
+		"user not exists":  {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
+		"user not exists2": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
+		"user not exists3": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
 	}
+
+	ctx := context.Background()
+	db, cleanup := NewTestDB(ctx)
+	t.Cleanup(cleanup)
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			ctx := context.Background()
-			db, cleanup, nw, dsn := NewTestDB(ctx)
-			fmt.Printf("test: %s, network name: %s, dsn: %s db: %p\n", name, nw, dsn, db)
-			t.Cleanup(cleanup)
+			beforeCleanupUser(db, t)
 
 			tt.createFunc(db)
-
 			q := NewQuery(db)
 			actual, err := q.Execute(1)
-			if !assert.Equal(t, tt.want, actual) {
-				var us []*User
-				db.Find(&us)
-				for _, u := range us {
-					fmt.Printf("assertion error. user.ID: %d, user.Name: %s\n", u.ID, u.Name)
-				}
-			}
+			assert.Equal(t, tt.want, actual)
 			tt.assertErr(t, err)
 		})
 	}

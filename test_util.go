@@ -27,7 +27,7 @@ var (
 	flywayImage     = "flyway/flyway:10.17.1"
 )
 
-func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string) {
+func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
@@ -45,7 +45,7 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string) {
 		panic(err)
 	}
 
-	db, err, dsn := createDBConnection(ctx, mysqlC)
+	db, err := createDBConnection(ctx, mysqlC)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string) {
 		}
 	}
 
-	return db, cleanupF, containerNetwork.Name, dsn
+	return db, cleanupF
 }
 
 func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
@@ -91,7 +91,6 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 
 func execFlywayContainer(ctx context.Context, networkName string) error {
 	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
-	fmt.Printf("flyway networkName: %s\n", networkName)
 	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: flywayImage,
@@ -129,16 +128,14 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 	return err
 }
 
-func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error, string) {
+func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
 	host, err := mysqlC.Host(ctx)
 	if err != nil {
-		fmt.Println("Get MySQL Host Error", err)
-		return nil, err, ""
+		return nil, err
 	}
 	port, err := mysqlC.MappedPort(ctx, dbPortNat)
 	if err != nil {
-		fmt.Println("Get MySQL Port Error", err)
-		return nil, err, ""
+		return nil, err
 	}
 	cfg := mysql.Config{
 		DBName:    dbName,
@@ -151,32 +148,13 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	err = backoff.Retry(func() error {
 		db, err = gorm.Open(mysql2.Open(cfg.FormatDSN()))
 		if err != nil {
-			fmt.Println("Open MySQL Error", err)
 			return err
 		}
 		return nil
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
-		fmt.Println("Open MySQL Error MaxRetry Exceeded", err)
-		return nil, err, ""
+		return nil, err
 	}
 	db.Logger = logger.Discard
-	err = backoff.Retry(func() error {
-		sqlDB, _ := db.DB()
-		if err = sqlDB.Ping(); err != nil {
-			fmt.Println("Ping MySQL Error", err)
-			return err
-		}
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
-	if err != nil {
-		fmt.Println("Ping MySQL Error MaxRetry Exceeded", err)
-		return nil, err, ""
-	}
-
-	sqlDB, _ := db.DB()
-	//sqlDB.SetMaxIdleConns(1)
-	//sqlDB.SetMaxOpenConns(1)
-	sqlDB.SetConnMaxLifetime(time.Second)
-	return db, nil, cfg.FormatDSN()
+	return db, nil
 }
