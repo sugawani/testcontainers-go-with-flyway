@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
@@ -15,6 +14,13 @@ import (
 	mysql2 "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
+type StdoutLogConsumer struct{}
+
+// Accept prints the log to stdout
+func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
+	fmt.Print(string(l.Content))
+}
 
 var (
 	dbContainerName = "mysqldb"
@@ -26,7 +32,6 @@ var (
 )
 
 func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
-	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
 		panic(err)
@@ -81,6 +86,7 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 
 func execFlywayContainer(ctx context.Context, networkName string) error {
 	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
+	fmt.Printf("mysqlDBUrl: %s, networkName: %s\n", mysqlDBUrl, networkName)
 	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: flywayImage,
@@ -97,9 +103,22 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 				},
 			},
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
+				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+			},
 		},
-		Started: true,
 	})
+
+	err = backoff.Retry(func() error {
+		err = flywayC.Start(ctx)
+		if err != nil {
+			fmt.Println("flyway Start Error", err)
+			return err
+		}
+		return nil
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+
 	defer func() {
 		if err = flywayC.Terminate(ctx); err != nil {
 			panic(err)
@@ -130,12 +149,13 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	err = backoff.Retry(func() error {
 		db, err = gorm.Open(mysql2.Open(cfg.FormatDSN()))
 		if err != nil {
+			fmt.Println("Open MySQL Error", err)
 			return err
 		}
 		return nil
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
-		fmt.Println("Open MySQL Error", err)
+		fmt.Println("Open MySQL Error MaxRetry Exceeded", err)
 		return nil, err
 	}
 	//sqlDB, _ := db.DB()
