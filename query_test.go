@@ -41,7 +41,7 @@ func Test_Query(t *testing.T) {
 
 			q := NewQuery(db)
 			actual, err := q.Execute(1)
-			if assert.Equal(t, tt.want, actual) {
+			if !assert.Equal(t, tt.want, actual) {
 				var us []*User
 				db.Find(&us)
 				fmt.Printf("assertion error. users: %v\n", us)
