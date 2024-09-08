@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -25,9 +26,14 @@ var (
 	dbPortNat       = nat.Port("3306/tcp")
 	mysqlImage      = "mysql:8.0"
 	flywayImage     = "flyway/flyway:10.17.1"
+	mu              sync.Mutex
 )
 
 func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string) {
+
+	mu.Lock()
+	defer mu.Unlock()
+
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
