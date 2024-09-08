@@ -26,7 +26,7 @@ var (
 	flywayImage     = "flyway/flyway:10.17.1"
 )
 
-func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
+func NewTestDB(ctx context.Context) (*gorm.DB, func(), string) {
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
@@ -49,7 +49,7 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 		panic(err)
 	}
 
-	return db, cleanupFunc
+	return db, cleanupFunc, containerNetwork.Name
 }
 
 func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
