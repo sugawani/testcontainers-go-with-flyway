@@ -83,7 +83,6 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 
 func execFlywayContainer(ctx context.Context, networkName string) error {
 	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
-	fmt.Printf("mysqlDBUrl: %s, networkName: %s\n", mysqlDBUrl, networkName)
 	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: flywayImage,
