@@ -18,6 +18,13 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+type StdoutLogConsumer struct{}
+
+// Accept prints the log to stdout
+func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
+	fmt.Print(string(l.Content))
+}
+
 var (
 	dbContainerName = "mysqldb"
 	dbName          = "mysql"
@@ -85,6 +92,7 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 
 func execFlywayContainer(ctx context.Context, networkName string) error {
 	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
+	fmt.Printf("flyway networkName: %s\n", networkName)
 	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: flywayImage,
@@ -101,6 +109,10 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 				},
 			},
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
+				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+			},
 		},
 	})
 
