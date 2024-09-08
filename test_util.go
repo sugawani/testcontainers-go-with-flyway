@@ -124,7 +124,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
+	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()), &gorm.Config{DisableAutomaticPing: true})
 	if err != nil {
 		return nil, err, ""
 	}
