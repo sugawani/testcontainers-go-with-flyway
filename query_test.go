@@ -44,7 +44,9 @@ func Test_Query(t *testing.T) {
 			if !assert.Equal(t, tt.want, actual) {
 				var us []*User
 				db.Find(&us)
-				fmt.Printf("assertion error. users: %v\n", us)
+				for _, u := range us {
+					fmt.Printf("assertion error. user.ID: %d, user.Name: %d\n", u.ID, u.Name)
+				}
 			}
 			tt.assertErr(t, err)
 		})
