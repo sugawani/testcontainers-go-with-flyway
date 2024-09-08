@@ -14,6 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	mysql2 "gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var (
@@ -150,6 +151,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		fmt.Println("Open MySQL Error MaxRetry Exceeded", err)
 		return nil, err
 	}
+	db.Logger = logger.Discard
 	err = backoff.Retry(func() error {
 		sqlDB, _ := db.DB()
 		if err = sqlDB.Ping(); err != nil {
