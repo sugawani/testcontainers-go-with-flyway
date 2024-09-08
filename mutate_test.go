@@ -32,7 +32,7 @@ func Test_Mutate(t *testing.T) {
 				var us []*User
 				db.Find(&us)
 				for _, u := range us {
-					fmt.Printf("assertion error. user.ID: %d, user.Name: %d\n", u.ID, u.Name)
+					fmt.Printf("assertion error. user.ID: %d, user.Name: %s\n", u.ID, u.Name)
 				}
 			}
 			assert.NoError(t, err)
