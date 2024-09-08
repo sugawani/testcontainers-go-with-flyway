@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
@@ -63,7 +62,8 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 			NetworkAliases: map[string][]string{
 				networkName: {dbContainerName},
 			},
-			WaitingFor: wait.ForListeningPort(dbPortNat),
+			//WaitingFor: wait.ForListeningPort(dbPortNat),
+			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server"),
 		},
 		Started: true,
 	})
@@ -124,13 +124,13 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()), &gorm.Config{DisableAutomaticPing: true})
+	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
 	if err != nil {
 		return nil, err, ""
 	}
-	sqlDB, _ := db.DB()
-	sqlDB.SetMaxIdleConns(1)
-	sqlDB.SetMaxOpenConns(1)
-	sqlDB.SetConnMaxLifetime(time.Second)
+	//sqlDB, _ := db.DB()
+	//sqlDB.SetMaxIdleConns(1)
+	//sqlDB.SetMaxOpenConns(1)
+	//sqlDB.SetConnMaxLifetime(time.Second)
 	return db, nil, cfg.FormatDSN()
 }
