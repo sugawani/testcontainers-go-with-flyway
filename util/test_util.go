@@ -1,10 +1,9 @@
-package main
+package util
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/docker/docker/pkg/ioutils"
@@ -101,7 +100,7 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 			Networks: []string{networkName},
 			Files: []testcontainers.ContainerFile{
 				{
-					HostFilePath:      "migrations",
+					HostFilePath:      "../migrations",
 					ContainerFilePath: "/flyway/sql",
 					FileMode:          644,
 				},
@@ -109,6 +108,9 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
 		},
 	})
+	if err != nil {
+		return err
+	}
 
 	err = backoff.Retry(func() error {
 		err = flywayC.Start(ctx)
@@ -119,7 +121,6 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 		return nil
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 
-	time.Sleep(1 * time.Second)
 	defer func() {
 		if err = flywayC.Terminate(ctx); err != nil {
 			panic(err)

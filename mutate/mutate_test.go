@@ -1,4 +1,4 @@
-package main
+package mutate
 
 import (
 	"context"
@@ -6,10 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
+
+	"github.com/sugawani/testcontainers-go-with-flyway/models"
+	"github.com/sugawani/testcontainers-go-with-flyway/util"
 )
 
 func beforeCleanupUser(db *gorm.DB, t *testing.T) {
-	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&User{}).Error; err != nil {
+	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error; err != nil {
 		t.Fatal("failed to beforeCleanup", err)
 	}
 }
@@ -25,7 +28,7 @@ func Test_Mutate(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, cleanup := NewTestDB(ctx)
+	db, cleanup := util.NewTestDB(ctx)
 	t.Cleanup(cleanup)
 
 	for name, tt := range cases {
