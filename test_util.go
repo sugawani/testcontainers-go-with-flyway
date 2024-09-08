@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/docker/docker/pkg/ioutils"
@@ -165,9 +166,9 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		return nil, err
 	}
 
-	//sqlDB, _ := db.DB()
+	sqlDB, _ := db.DB()
 	//sqlDB.SetMaxIdleConns(1)
 	//sqlDB.SetMaxOpenConns(1)
-	//sqlDB.SetConnMaxLifetime(time.Second)
+	sqlDB.SetConnMaxLifetime(time.Second)
 	return db, nil
 }
