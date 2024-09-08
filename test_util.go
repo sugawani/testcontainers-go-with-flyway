@@ -125,6 +125,7 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 		return nil
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 
+	time.Sleep(1 * time.Second)
 	defer func() {
 		if err = flywayC.Terminate(ctx); err != nil {
 			panic(err)
