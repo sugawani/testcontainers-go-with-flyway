@@ -28,7 +28,11 @@ func Test_Mutate(t *testing.T) {
 
 			m := NewMutate(db)
 			actual, err := m.Execute(tt.want.Name)
-			assert.Equal(t, tt.want, actual)
+			if !assert.Equal(t, tt.want, actual) {
+				var us []*User
+				db.Find(&us)
+				fmt.Printf("assertion error. users: %v\n", us)
+			}
 			assert.NoError(t, err)
 		})
 	}
