@@ -33,8 +33,8 @@ func Test_Query(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
-			db, cleanup, nw := NewTestDB(ctx)
-			fmt.Printf("test: %s, network name: %s\n", name, nw)
+			db, cleanup, nw, dsn := NewTestDB(ctx)
+			fmt.Printf("test: %s, network name: %s, dsn: %s\n", name, nw, dsn)
 			t.Cleanup(cleanup)
 
 			tt.createFunc(db)

@@ -18,13 +18,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type StdoutLogConsumer struct{}
-
-// Accept prints the log to stdout
-func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
-	fmt.Print(string(l.Content))
-}
-
 var (
 	dbContainerName = "mysqldb"
 	dbName          = "mysql"
@@ -34,7 +27,7 @@ var (
 	flywayImage     = "flyway/flyway:10.17.1"
 )
 
-func NewTestDB(ctx context.Context) (*gorm.DB, func(), string) {
+func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string) {
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
@@ -52,12 +45,12 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func(), string) {
 		panic(err)
 	}
 
-	db, err := createDBConnection(ctx, mysqlC)
+	db, err, dsn := createDBConnection(ctx, mysqlC)
 	if err != nil {
 		panic(err)
 	}
 
-	return db, cleanupFunc, containerNetwork.Name
+	return db, cleanupFunc, containerNetwork.Name, dsn
 }
 
 func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
@@ -109,10 +102,6 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 				},
 			},
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
-			},
 		},
 	})
 
@@ -134,16 +123,16 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 	return err
 }
 
-func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
+func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error, string) {
 	host, err := mysqlC.Host(ctx)
 	if err != nil {
 		fmt.Println("Get MySQL Host Error", err)
-		return nil, err
+		return nil, err, ""
 	}
 	port, err := mysqlC.MappedPort(ctx, dbPortNat)
 	if err != nil {
 		fmt.Println("Get MySQL Port Error", err)
-		return nil, err
+		return nil, err, ""
 	}
 	cfg := mysql.Config{
 		DBName:    dbName,
@@ -163,7 +152,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		fmt.Println("Open MySQL Error MaxRetry Exceeded", err)
-		return nil, err
+		return nil, err, ""
 	}
 	db.Logger = logger.Discard
 	err = backoff.Retry(func() error {
@@ -176,12 +165,12 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		fmt.Println("Ping MySQL Error MaxRetry Exceeded", err)
-		return nil, err
+		return nil, err, ""
 	}
 
 	sqlDB, _ := db.DB()
 	//sqlDB.SetMaxIdleConns(1)
 	//sqlDB.SetMaxOpenConns(1)
 	sqlDB.SetConnMaxLifetime(time.Second)
-	return db, nil
+	return db, nil, cfg.FormatDSN()
 }
