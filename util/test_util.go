@@ -89,25 +89,38 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 }
 
 func execFlywayContainer(ctx context.Context, networkName string) error {
-	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
-	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image: flywayImage,
-			Cmd: []string{
-				mysqlDBUrl, "-user=root",
-				"baseline", "-baselineVersion=0.0",
-				"-locations=filesystem:/flyway", "-validateOnMigrate=false", "migrate"},
-			Networks: []string{networkName},
-			Files: []testcontainers.ContainerFile{
-				{
-					HostFilePath:      "../migrations",
-					ContainerFilePath: "/flyway/sql",
-					FileMode:          644,
+	flywayCreateFunc := func() (testcontainers.Container, error) {
+		mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
+		flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+			ContainerRequest: testcontainers.ContainerRequest{
+				Image: flywayImage,
+				Cmd: []string{
+					mysqlDBUrl, "-user=root",
+					"baseline", "-baselineVersion=0.0",
+					"-locations=filesystem:/flyway", "-validateOnMigrate=false", "migrate"},
+				Networks: []string{networkName},
+				Files: []testcontainers.ContainerFile{
+					{
+						HostFilePath:      "../migrations",
+						ContainerFilePath: "/flyway/sql",
+						FileMode:          644,
+					},
 				},
+				WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
 			},
-			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
-		},
-	})
+		})
+		return flywayC, err
+	}
+	var flywayC testcontainers.Container
+	err := backoff.Retry(func() error {
+		flywayCn, err := flywayCreateFunc()
+		if err != nil {
+			fmt.Println("flyway Start Error", err)
+			return err
+		}
+		flywayC = flywayCn
+		return nil
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		return err
 	}
