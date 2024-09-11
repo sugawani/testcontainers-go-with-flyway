@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/docker/docker/pkg/ioutils"
@@ -125,10 +124,10 @@ func execFlywayContainer(ctx context.Context, networkName string, ip string) err
 				},
 			},
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
-			},
+			//LogConsumerCfg: &testcontainers.LogConsumerConfig{
+			//	Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
+			//	Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+			//},
 		},
 	})
 	if err != nil {
