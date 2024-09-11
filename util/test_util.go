@@ -144,26 +144,13 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip st
 				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{n: u.N}},
 			},
 		},
+		Started: true,
 	})
 	if err != nil {
 		u.errLog("flyway GenericContainer Error", err)
 		return err
 	}
-
-	err = backoff.Retry(func() error {
-		u.infoLog("flyway completed")
-		err = flywayC.Start(ctx)
-		u.infoLog("flyway completed")
-		if err != nil {
-			u.errLog("flyway Start Error", err)
-			return err
-		}
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
-	if err != nil {
-		u.errLog("flyway start Error", err)
-		return err
-	}
+	u.infoLog("flyway completed")
 
 	defer func() {
 		if err = flywayC.Terminate(ctx); err != nil {
