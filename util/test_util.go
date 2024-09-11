@@ -3,10 +3,9 @@ package util
 import (
 	"context"
 	"fmt"
-	"log"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
@@ -26,9 +25,16 @@ var (
 	flywayImage     = "flyway/flyway:10.17.1"
 )
 
+type StdoutLogConsumer struct{}
+
+// Accept prints the log to stdout
+func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
+	fmt.Print(string(l.Content))
+}
+
 func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, string) {
 	// disable testcontainers log
-	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
+	//testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
@@ -110,6 +116,10 @@ func execFlywayContainer(ctx context.Context, networkName string, ip string) err
 				},
 			},
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
+				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+			},
 		},
 	})
 	if err != nil {
