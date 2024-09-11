@@ -40,15 +40,15 @@ type Util struct {
 
 // Accept prints the log to stdout
 func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
-	fmt.Printf("[🐱🐱🐱] name: %s, log: %s\n", lc.n, l.Content)
+	fmt.Printf("[🐱🐱🐱 %s] name: %s, log: %s\n", time.Now().Format(time.RFC3339Nano), lc.n, l.Content)
 }
 
 func (u Util) errLog(e string, err error) {
-	fmt.Printf("[🐽🐽🐽] name: %s, %s, error: %v\n", u.N, e, err)
+	fmt.Printf("[🐽🐽🐽 %s] name: %s, %s, error: %v\n", time.Now().Format(time.RFC3339Nano), u.N, e, err)
 }
 
 func (u Util) infoLog(e string) {
-	fmt.Printf("[🐶🐶🐶] name: %s, %s\n", u.N, e)
+	fmt.Printf("[🐶🐶🐶 %s] name: %s, %s\n", time.Now().Format(time.RFC3339Nano), u.N, e)
 }
 
 func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, string) {
@@ -138,7 +138,7 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip st
 					FileMode:          644,
 				},
 			},
-			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
+			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp().WithOccurrence(1),
 			LogConsumerCfg: &testcontainers.LogConsumerConfig{
 				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
 				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{n: u.N}},
