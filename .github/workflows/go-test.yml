@@ -3,8 +3,6 @@ name: go-test
 on:
   push:
     branches: [ "main" ]
-  schedule:
-    - cron: '*/30 * * * *'
 
 jobs:
   build-and-test:
