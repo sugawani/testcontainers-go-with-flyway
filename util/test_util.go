@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -172,7 +173,15 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	}
 	var db *gorm.DB
 	err = backoff.Retry(func() error {
-		db, err = gorm.Open(mysql2.Open(cfg.FormatDSN()))
+		sqldb, err := sql.Open("mysql", cfg.FormatDSN())
+		if err != nil {
+			errLog("sql.Open Error", err)
+			return err
+		}
+		sqldb.SetMaxIdleConns(1)
+		sqldb.SetMaxOpenConns(1)
+		sqldb.SetConnMaxLifetime(10)
+		db, err = gorm.Open(mysql2.New(mysql2.Config{Conn: sqldb}))
 		if err != nil {
 			errLog("gorm.Open Error", err)
 			return err
