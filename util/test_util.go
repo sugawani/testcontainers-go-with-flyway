@@ -26,26 +26,30 @@ var (
 	dbPortNat       = nat.Port("3306/tcp")
 	mysqlImage      = "mysql:8.0"
 	flywayImage     = "flyway/flyway:10.17.1"
-	n               string
 )
 
-type StdoutLogConsumer struct{}
+type StdoutLogConsumer struct {
+	n string
+}
+
+type Util struct {
+	N string
+}
 
 // Accept prints the log to stdout
 func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
-	fmt.Print(string(l.Content))
+	fmt.Printf("[🐱🐱🐱] name: %s, log: %s\n", lc.n, l.Content)
 }
 
-func errLog(e string, err error) {
-	fmt.Printf("[🐽🐽🐽] name: %s, %s, error: %v\n", n, e, err)
+func (u Util) errLog(e string, err error) {
+	fmt.Printf("[🐽🐽🐽] name: %s, %s, error: %v\n", u.N, e, err)
 }
 
-func infoLog(e string) {
-	fmt.Printf("[🐶🐶🐶] name: %s, %s\n", n, e)
+func (u Util) infoLog(e string) {
+	fmt.Printf("[🐶🐶🐶] name: %s, %s\n", u.N, e)
 }
 
-func NewTestDB(ctx context.Context, name string) (*gorm.DB, func(), string, string, string) {
-	n = name
+func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, string) {
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
@@ -54,17 +58,17 @@ func NewTestDB(ctx context.Context, name string) (*gorm.DB, func(), string, stri
 		panic(err)
 	}
 
-	mysqlC, cleanupFunc, err := createMySQLContainer(ctx, containerNetwork.Name)
+	mysqlC, cleanupFunc, err := u.createMySQLContainer(ctx, containerNetwork.Name)
 	if err != nil {
 		panic(err)
 	}
 
 	ip, _ := mysqlC.ContainerIP(ctx)
-	if err = execFlywayContainer(ctx, containerNetwork.Name, ip); err != nil {
+	if err = u.execFlywayContainer(ctx, containerNetwork.Name, ip); err != nil {
 		panic(err)
 	}
 
-	db, err := createDBConnection(ctx, mysqlC)
+	db, err := u.createDBConnection(ctx, mysqlC)
 	if err != nil {
 		panic(err)
 	}
@@ -81,7 +85,7 @@ func NewTestDB(ctx context.Context, name string) (*gorm.DB, func(), string, stri
 	return db, cleanupF, host, port.Port(), ip
 }
 
-func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
+func (u Util) createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
 	mysqlC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: mysqlImage,
@@ -111,9 +115,9 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 	return mysqlC, cleanupFunc, nil
 }
 
-func execFlywayContainer(ctx context.Context, networkName string, ip string) error {
+func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip string) error {
 	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", ip, dbPort, dbName)
-	infoLog("flyway start")
+	u.infoLog("flyway start")
 	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: flywayImage,
@@ -132,25 +136,25 @@ func execFlywayContainer(ctx context.Context, networkName string, ip string) err
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
 			LogConsumerCfg: &testcontainers.LogConsumerConfig{
 				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{n: u.N}},
 			},
 		},
 	})
 	if err != nil {
-		errLog("flyway GenericContainer Error", err)
+		u.errLog("flyway GenericContainer Error", err)
 		return err
 	}
 
 	err = backoff.Retry(func() error {
 		err = flywayC.Start(ctx)
 		if err != nil {
-			errLog("flyway Start Error", err)
+			u.errLog("flyway Start Error", err)
 			return err
 		}
 		return nil
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
 	if err != nil {
-		errLog("flyway start Error", err)
+		u.errLog("flyway start Error", err)
 		return err
 	}
 
@@ -162,7 +166,7 @@ func execFlywayContainer(ctx context.Context, networkName string, ip string) err
 	return nil
 }
 
-func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
+func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
 	host, err := mysqlC.Host(ctx)
 	if err != nil {
 		return nil, err
@@ -182,7 +186,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	err = backoff.Retry(func() error {
 		sqldb, err := sql.Open("mysql", cfg.FormatDSN())
 		if err != nil {
-			errLog("sql.Open Error", err)
+			u.errLog("sql.Open Error", err)
 			return err
 		}
 		sqldb.SetMaxIdleConns(1)
@@ -190,7 +194,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		sqldb.SetConnMaxLifetime(10)
 		db, err = gorm.Open(mysql2.New(mysql2.Config{Conn: sqldb}))
 		if err != nil {
-			errLog("gorm.Open Error", err)
+			u.errLog("gorm.Open Error", err)
 			return err
 		}
 		return nil

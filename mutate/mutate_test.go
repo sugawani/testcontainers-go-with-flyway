@@ -32,7 +32,7 @@ func Test_Mutate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
-			db, cleanup, host, port, ip := util.NewTestDB(ctx, name)
+			db, cleanup, host, port, ip := util.Util{N: name}.NewTestDB(ctx)
 			fmt.Printf("name: %s, host: %s, port: %s, ip: %s\n", name, host, port, ip)
 
 			t.Cleanup(cleanup)
