@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
@@ -41,7 +43,7 @@ func errLog(e string, err error) {
 func NewTestDB(ctx context.Context, name string) (*gorm.DB, func(), string, string, string) {
 	n = name
 	// disable testcontainers log
-	//testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
+	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
