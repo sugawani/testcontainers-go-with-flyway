@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/docker/docker/pkg/ioutils"
@@ -37,6 +38,10 @@ func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
 
 func errLog(e string, err error) {
 	fmt.Printf("[🐽🐽🐽] name: %s, %s, error: %v\n", n, e, err)
+}
+
+func infoLog(e string) {
+	fmt.Printf("[🐶🐶🐶] name: %s, %s\n", n, e)
 }
 
 func NewTestDB(ctx context.Context, name string) (*gorm.DB, func(), string, string, string) {
@@ -108,6 +113,7 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 
 func execFlywayContainer(ctx context.Context, networkName string, ip string) error {
 	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", ip, dbPort, dbName)
+	infoLog("flyway start")
 	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: flywayImage,
@@ -124,10 +130,10 @@ func execFlywayContainer(ctx context.Context, networkName string, ip string) err
 				},
 			},
 			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
-			//LogConsumerCfg: &testcontainers.LogConsumerConfig{
-			//	Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-			//	Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
-			//},
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
+				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+			},
 		},
 	})
 	if err != nil {
