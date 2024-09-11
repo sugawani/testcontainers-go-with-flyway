@@ -136,7 +136,7 @@ func execFlywayContainer(ctx context.Context, networkName string, ip string) err
 			return err
 		}
 		return nil
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
 
 	defer func() {
 		if err = flywayC.Terminate(ctx); err != nil {
@@ -166,10 +166,11 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	err = backoff.Retry(func() error {
 		db, err = gorm.Open(mysql2.Open(cfg.FormatDSN()))
 		if err != nil {
+			fmt.Println("gorm.Open Error", err)
 			return err
 		}
 		return nil
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
 	if err != nil {
 		return nil, err
 	}
