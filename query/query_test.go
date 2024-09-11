@@ -43,8 +43,8 @@ func Test_Query(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
-			db, cleanup, host, port := util.NewTestDB(ctx)
-			fmt.Printf("name: %s, host: %s, port: %s\n", name, host, port)
+			db, cleanup, host, port, ip := util.NewTestDB(ctx)
+			fmt.Printf("name: %s, host: %s, port: %s, ip: %s\n", name, host, port, ip)
 			t.Cleanup(cleanup)
 			beforeCleanupUser(db, t)
 
