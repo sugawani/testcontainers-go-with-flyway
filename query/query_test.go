@@ -38,12 +38,12 @@ func Test_Query(t *testing.T) {
 		"user not exists3": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
 	}
 
-	ctx := context.Background()
-	db, cleanup := util.NewTestDB(ctx)
-	t.Cleanup(cleanup)
-
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			db, cleanup := util.NewTestDB(ctx)
+			t.Cleanup(cleanup)
 			beforeCleanupUser(db, t)
 
 			tt.createFunc(db)
