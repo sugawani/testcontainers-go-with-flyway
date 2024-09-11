@@ -17,6 +17,8 @@ import (
 	mysql2 "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/sugawani/testcontainers-go-with-flyway/models"
 )
 
 var (
@@ -72,7 +74,7 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, 
 	if err != nil {
 		panic(err)
 	}
-	if err := db.Raw("select * from users").Error; err != nil {
+	if err := db.Find(&models.User{}).Error; err != nil {
 		u.errLog("db.Raw Error", err)
 	}
 	cleanupF := func() {
