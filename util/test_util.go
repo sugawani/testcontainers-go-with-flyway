@@ -23,6 +23,7 @@ var (
 	dbPortNat       = nat.Port("3306/tcp")
 	mysqlImage      = "mysql:8.0"
 	flywayImage     = "flyway/flyway:10.17.1"
+	n               string
 )
 
 type StdoutLogConsumer struct{}
@@ -32,7 +33,12 @@ func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
 	fmt.Print(string(l.Content))
 }
 
-func NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, string) {
+func errLog(e string, err error) {
+	fmt.Printf("[🐽🐽🐽] name: %s, %s, error: %v\n", n, e, err)
+}
+
+func NewTestDB(ctx context.Context, name string) (*gorm.DB, func(), string, string, string) {
+	n = name
 	// disable testcontainers log
 	//testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
@@ -123,20 +129,20 @@ func execFlywayContainer(ctx context.Context, networkName string, ip string) err
 		},
 	})
 	if err != nil {
-		fmt.Println("flyway GenericContainer Error", err)
+		errLog("flyway GenericContainer Error", err)
 		return err
 	}
 
 	err = backoff.Retry(func() error {
 		err = flywayC.Start(ctx)
 		if err != nil {
-			fmt.Println("flyway Start Error", err)
+			errLog("flyway Start Error", err)
 			return err
 		}
 		return nil
 	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
 	if err != nil {
-		fmt.Println("flyway start Error", err)
+		errLog("flyway start Error", err)
 		return err
 	}
 
@@ -168,7 +174,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 	err = backoff.Retry(func() error {
 		db, err = gorm.Open(mysql2.Open(cfg.FormatDSN()))
 		if err != nil {
-			fmt.Println("gorm.Open Error", err)
+			errLog("gorm.Open Error", err)
 			return err
 		}
 		return nil
