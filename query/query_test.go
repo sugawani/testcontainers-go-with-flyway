@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ func beforeCleanupUser(db *gorm.DB, t *testing.T) {
 }
 
 func Test_Query(t *testing.T) {
+	os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 	createUser := func(db *gorm.DB) {
 		db.Create(&models.User{ID: 1, Name: "name"})
 	}
