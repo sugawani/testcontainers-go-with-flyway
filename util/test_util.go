@@ -72,6 +72,9 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, 
 	if err != nil {
 		panic(err)
 	}
+	if err := db.Raw("select * from users").Error; err != nil {
+		u.errLog("db.Raw Error", err)
+	}
 	cleanupF := func() {
 		cleanupFunc()
 		if err = containerNetwork.Remove(ctx); err != nil {
