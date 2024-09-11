@@ -151,8 +151,9 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip st
 	}
 
 	err = backoff.Retry(func() error {
+		u.infoLog("flyway completed")
 		err = flywayC.Start(ctx)
-		time.Sleep(5 * time.Second)
+		u.infoLog("flyway completed")
 		if err != nil {
 			u.errLog("flyway Start Error", err)
 			return err
