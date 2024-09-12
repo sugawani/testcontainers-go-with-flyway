@@ -63,8 +63,7 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, 
 		panic(err)
 	}
 
-	ip, _ := mysqlC.ContainerIP(ctx)
-	if err = u.execFlywayContainer(ctx, containerNetwork.Name, ip); err != nil {
+	if err = u.execFlywayContainer(ctx, containerNetwork.Name); err != nil {
 		panic(err)
 	}
 
@@ -72,17 +71,12 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, 
 	if err != nil {
 		panic(err)
 	}
-	cleanupF := func() {
-		cleanupFunc()
-		if err = containerNetwork.Remove(ctx); err != nil {
-			panic(err)
-		}
-	}
 
+	ip, _ := mysqlC.ContainerIP(ctx)
 	host, _ := mysqlC.Host(ctx)
 	port, _ := mysqlC.MappedPort(ctx, dbPortNat)
 
-	return db, cleanupF, host, port.Port(), ip
+	return db, cleanupFunc, host, port.Port(), ip
 }
 
 func (u Util) createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
@@ -115,8 +109,8 @@ func (u Util) createMySQLContainer(ctx context.Context, networkName string) (tes
 	return mysqlC, cleanupFunc, nil
 }
 
-func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip string) error {
-	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", ip, dbPort, dbName)
+func (u Util) execFlywayContainer(ctx context.Context, networkName string) error {
+	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
 	flywayFn := func() error {
 		_, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
