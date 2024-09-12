@@ -138,7 +138,8 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip st
 					FileMode:          644,
 				},
 			},
-			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp().WithOccurrence(1),
+			//WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp().WithOccurrence(1),
+			WaitingFor: wait.ForExit(),
 			LogConsumerCfg: &testcontainers.LogConsumerConfig{
 				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
 				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{n: u.N}},
@@ -150,7 +151,6 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip st
 		u.errLog("flyway GenericContainer Error", err)
 		return err
 	}
-	time.Sleep(3 * time.Second)
 	u.infoLog("flyway completed")
 
 	defer func() {
