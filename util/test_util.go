@@ -150,6 +150,7 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string, ip st
 		u.errLog("flyway GenericContainer Error", err)
 		return err
 	}
+	time.Sleep(3 * time.Second)
 	u.infoLog("flyway completed")
 
 	defer func() {
