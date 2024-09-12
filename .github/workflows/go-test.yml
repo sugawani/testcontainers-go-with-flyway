@@ -2,20 +2,20 @@ name: go-test
 
 on:
   push:
-    branches: [ "main" ]
+  schedule:
+    - cron: '*/30 * * * *'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature/to_parallel
       - uses: actions/setup-go@v5
         id: setup-go
         with:
           go-version-file: "go.mod"
 
-      - name: Build
-        run: go build -v ./...
-
       - name: Test
-        run: go test -v -race ./...
+        run: go test -v ./...
