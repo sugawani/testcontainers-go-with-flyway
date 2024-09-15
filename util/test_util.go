@@ -20,12 +20,11 @@ import (
 )
 
 var (
-	dbContainerName = "mysqldb"
-	dbName          = "mysql"
-	dbPort          = 3306
-	dbPortNat       = nat.Port("3306/tcp")
-	mysqlImage      = "mysql:8.0"
-	flywayImage     = "flyway/flyway:10.17.1"
+	dbName      = "mysql"
+	dbPort      = 3306
+	dbPortNat   = nat.Port("3306/tcp")
+	mysqlImage  = "mysql:8.0"
+	flywayImage = "flyway/flyway:10.17.1"
 )
 
 type StdoutLogConsumer struct {
@@ -63,7 +62,8 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, 
 		panic(err)
 	}
 
-	if err = u.execFlywayContainer(ctx, containerNetwork.Name); err != nil {
+	ip, _ := mysqlC.ContainerIP(ctx)
+	if err = u.execFlywayContainer(ctx, containerNetwork.Name, ip); err != nil {
 		panic(err)
 	}
 
@@ -72,7 +72,6 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func(), string, string, 
 		panic(err)
 	}
 
-	ip, _ := mysqlC.ContainerIP(ctx)
 	host, _ := mysqlC.Host(ctx)
 	port, _ := mysqlC.MappedPort(ctx, dbPortNat)
 
@@ -90,10 +89,7 @@ func (u Util) createMySQLContainer(ctx context.Context, networkName string) (tes
 			ExposedPorts: []string{fmt.Sprintf("%d/tcp", dbPort)},
 			Tmpfs:        map[string]string{"/var/lib/mysql": "rw"},
 			Networks:     []string{networkName},
-			NetworkAliases: map[string][]string{
-				networkName: {dbContainerName},
-			},
-			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server"),
+			WaitingFor:   wait.ForLog("port: 3306  MySQL Community Server"),
 		},
 		Started: true,
 	})
@@ -109,8 +105,8 @@ func (u Util) createMySQLContainer(ctx context.Context, networkName string) (tes
 	return mysqlC, cleanupFunc, nil
 }
 
-func (u Util) execFlywayContainer(ctx context.Context, networkName string) error {
-	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
+func (u Util) execFlywayContainer(ctx context.Context, networkName string, mysqlIP string) error {
+	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", mysqlIP, dbPort, dbName)
 	flywayFn := func() error {
 		_, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
