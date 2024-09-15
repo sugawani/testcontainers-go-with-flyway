@@ -3,9 +3,9 @@ package util
 import (
 	"context"
 	"fmt"
-	"time"
+	"log"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
@@ -34,7 +34,7 @@ var (
 
 func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	// disable testcontainers log
-	// testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
+	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
@@ -95,54 +95,29 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 }
 
 func execFlywayContainer(ctx context.Context, networkName string) error {
-	flywayCreateFunc := func() (testcontainers.Container, error) {
-		mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
-		flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-			ContainerRequest: testcontainers.ContainerRequest{
-				Image: flywayImage,
-				Cmd: []string{
-					mysqlDBUrl, "-user=root",
-					"baseline", "-baselineVersion=0.0",
-					"-locations=filesystem:/flyway", "-validateOnMigrate=false", "migrate"},
-				Networks: []string{networkName},
-				Files: []testcontainers.ContainerFile{
-					{
-						HostFilePath:      "../migrations",
-						ContainerFilePath: "/flyway/sql",
-						FileMode:          644,
-					},
-				},
-				WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
-				LogConsumerCfg: &testcontainers.LogConsumerConfig{
-					Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-					Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
+	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: flywayImage,
+			Cmd: []string{
+				mysqlDBUrl, "-user=root",
+				"baseline", "-baselineVersion=0.0",
+				"-locations=filesystem:/flyway", "-validateOnMigrate=false", "migrate"},
+			Networks: []string{networkName},
+			Files: []testcontainers.ContainerFile{
+				{
+					HostFilePath:      "../migrations",
+					ContainerFilePath: "/flyway/sql",
+					FileMode:          644,
 				},
 			},
-		})
-		return flywayC, err
-	}
-	var flywayC testcontainers.Container
-	err := backoff.Retry(func() error {
-		flywayCn, err := flywayCreateFunc()
-		if err != nil {
-			fmt.Println("flyway Start Error", err)
-			return err
-		}
-		flywayC = flywayCn
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
+		},
+		Started: true,
+	})
 	if err != nil {
 		return err
 	}
-
-	err = backoff.Retry(func() error {
-		err = flywayC.Start(ctx)
-		if err != nil {
-			fmt.Println("flyway Start Error", err)
-			return err
-		}
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 
 	defer func() {
 		if err = flywayC.Terminate(ctx); err != nil {
@@ -168,14 +143,7 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	var db *gorm.DB
-	err = backoff.Retry(func() error {
-		db, err = gorm.Open(mysql2.Open(cfg.FormatDSN()))
-		if err != nil {
-			return err
-		}
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
 	if err != nil {
 		return nil, err
 	}
