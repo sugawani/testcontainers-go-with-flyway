@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 
@@ -143,8 +144,28 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
+	sqlDB, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
+		fmt.Println("failed to open sql", err)
+		return nil, err
+	}
+	if err = sqlDB.Ping(); err != nil {
+		fmt.Println("failed to ping sql", err)
+		for i := range 3 {
+			n := i + 1
+			fmt.Printf("retry %d\n", n)
+			sqlDB, err = sql.Open("mysql", cfg.FormatDSN())
+			if err != nil {
+				fmt.Println("failed to open sql retry...", err)
+				continue
+			}
+			break
+		}
+		return nil, err
+	}
+	db, err := gorm.Open(mysql2.New(mysql2.Config{Conn: sqlDB}))
+	if err != nil {
+		fmt.Println("failed to open gorm", err)
 		return nil, err
 	}
 	db.Logger = logger.Discard
