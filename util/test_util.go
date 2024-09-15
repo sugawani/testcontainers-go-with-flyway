@@ -139,6 +139,7 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string, mysql
 		u.errLog("flyway GenericContainer Error", err)
 		return err
 	}
+	time.Sleep(2 * time.Second)
 
 	return nil
 }
