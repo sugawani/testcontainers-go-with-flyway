@@ -161,7 +161,6 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 			}
 			break
 		}
-		return nil, err
 	}
 	db, err := gorm.Open(mysql2.New(mysql2.Config{Conn: sqlDB}))
 	if err != nil {
