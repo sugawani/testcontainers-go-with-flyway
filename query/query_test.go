@@ -2,7 +2,6 @@ package query
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +18,10 @@ func beforeCleanupUser(db *gorm.DB, t *testing.T) {
 }
 
 func Test_Query(t *testing.T) {
+	ctx := context.Background()
+	db, cleanup := util.Util{N: "Test_Query"}.NewTestDB(ctx)
+	t.Cleanup(cleanup)
+
 	createUser := func(db *gorm.DB) {
 		db.Create(&models.User{ID: 1, Name: "name"})
 	}
@@ -41,11 +44,6 @@ func Test_Query(t *testing.T) {
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			ctx := context.Background()
-			db, cleanup, host, port, ip := util.Util{N: name}.NewTestDB(ctx)
-			fmt.Printf("name: %s, host: %s, port: %s, ip: %s\n", name, host, port, ip)
-			t.Cleanup(cleanup)
 			beforeCleanupUser(db, t)
 
 			tt.createFunc(db)
