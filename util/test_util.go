@@ -3,9 +3,11 @@ package util
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
@@ -48,7 +50,7 @@ var (
 
 func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	// disable testcontainers log
-	//testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
+	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
 	var (
 		containerNetwork *testcontainers.DockerNetwork
