@@ -231,7 +231,11 @@ func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Cont
 			fmt.Printf("retry %d\n", n)
 			sqlDB, err = sql.Open("mysql", cfg.FormatDSN())
 			if err != nil {
-				u.errLog("failed to open sql retry...", err)
+				u.errLog("failed to open sql retry", err)
+				continue
+			}
+			if err = sqlDB.Ping(); err != nil {
+				u.errLog("failed to ping sql retry...", err)
 				continue
 			} else {
 				u.infoLog("success to open sql retry")
