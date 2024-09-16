@@ -100,60 +100,6 @@ func (u Util) createMySQLContainer(ctx context.Context, networkName string) (tes
 				networkName: {dbContainerName},
 			},
 			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server"),
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{n: u.N}},
-			},
-			LifecycleHooks: []testcontainers.ContainerLifecycleHooks{
-				{
-					PostCreates: []testcontainers.ContainerHook{
-						func(ctx context.Context, container testcontainers.Container) error {
-							ip, err := container.ContainerIP(ctx)
-							if err != nil {
-								return err
-							}
-							name, err := container.Name(ctx)
-							if err != nil {
-								return err
-							}
-							host, err := container.Host(ctx)
-							if err != nil {
-								return err
-							}
-							sessionID := container.SessionID()
-							port, err := container.Ports(ctx)
-							if err != nil {
-								return err
-							}
-							u.infoLog(fmt.Sprintf("mysql container created, ip: %s, name: %s, host: %s, sessionID: %s, port: %v", ip, name, host, sessionID, port))
-							return nil
-						},
-					},
-					PreTerminates: []testcontainers.ContainerHook{
-						func(ctx context.Context, container testcontainers.Container) error {
-							ip, err := container.ContainerIP(ctx)
-							if err != nil {
-								return err
-							}
-							name, err := container.Name(ctx)
-							if err != nil {
-								return err
-							}
-							host, err := container.Host(ctx)
-							if err != nil {
-								return err
-							}
-							sessionID := container.SessionID()
-							port, err := container.Ports(ctx)
-							if err != nil {
-								return err
-							}
-							u.infoLog(fmt.Sprintf("mysql container terminated, ip: %s, name: %s, host: %s, sessionID: %s, port: %v", ip, name, host, sessionID, port))
-							return nil
-						},
-					},
-				},
-			},
 		},
 		Started: true,
 	})
