@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - with:
-        - ref: feature/investigate_terminate_hook
+        with:
+          ref: feature/investigate_terminate_hook
       - uses: actions/setup-go@v5
         id: setup-go
         with:
