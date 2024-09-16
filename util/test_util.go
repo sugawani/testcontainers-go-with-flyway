@@ -101,6 +101,10 @@ func (u Util) createMySQLContainer(ctx context.Context, networkName string) (tes
 				networkName: {dbContainerName},
 			},
 			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server"),
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
+				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{n: u.N}},
+			},
 			LifecycleHooks: []testcontainers.ContainerLifecycleHooks{
 				{
 					PostCreates: []testcontainers.ContainerHook{
