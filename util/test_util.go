@@ -75,6 +75,10 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	err = backoff.Retry(func() error {
 		cleanupFunc()
 		mysqlC, cleanupFunc, err = u.createMySQLContainer(ctx, containerNetwork.Name)
+		if err = u.execFlywayContainer(ctx, containerNetwork.Name); err != nil {
+			u.errLog("failed to exec flyway container", err)
+			return err
+		}
 		db, err = u.createDBConnection(ctx, mysqlC, containerNetwork.Name)
 		if err != nil {
 			u.errLog("failed to create db connection", err)
