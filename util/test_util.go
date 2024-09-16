@@ -168,7 +168,9 @@ func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Cont
 	}
 	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
 	if err != nil {
+		u.infoLog("failed to create db connection. tring to retry")
 		if mysqlC.IsRunning() {
+			u.infoLog(fmt.Sprintf("terminate mysql host: %s, port: %d", host, port.Int()))
 			if err = mysqlC.Terminate(ctx); err != nil {
 				u.errLog("failed to terminate mysql container", err)
 				return nil, err
@@ -176,15 +178,18 @@ func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Cont
 		}
 		mysqlC2, cleanup, err2 := u.createMySQLContainer(ctx, networkName)
 		if err2 != nil {
+			u.errLog("failed to retry create mysql container", err2)
 			cleanup()
 			return nil, err2
 		}
 		host2, err2 := mysqlC2.Host(ctx)
 		if err2 != nil {
+			u.errLog("failed to retry get host", err2)
 			return nil, err2
 		}
 		port2, err2 := mysqlC2.MappedPort(ctx, dbPortNat)
 		if err2 != nil {
+			u.errLog("failed to retry get port", err2)
 			return nil, err2
 		}
 		cfg2 := mysql.Config{
