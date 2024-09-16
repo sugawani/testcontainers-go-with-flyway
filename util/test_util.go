@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
@@ -37,7 +39,14 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
-	containerNetwork, err := network.New(ctx)
+	var (
+		containerNetwork *testcontainers.DockerNetwork
+		err              error
+	)
+	err = backoff.Retry(func() error {
+		containerNetwork, err = network.New(ctx)
+		return err
+	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 10))
 	if err != nil {
 		panic(err)
 	}
