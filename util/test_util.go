@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -72,7 +71,7 @@ func (u Util) NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 		panic(err)
 	}
 
-	db, err := u.createDBConnection(ctx, mysqlC)
+	db, err := u.createDBConnection(ctx, mysqlC, containerNetwork.Name)
 	if err != nil {
 		panic(err)
 	}
@@ -163,8 +162,10 @@ func (u Util) createMySQLContainer(ctx context.Context, networkName string) (tes
 	}
 
 	cleanupFunc := func() {
-		if err = mysqlC.Terminate(ctx); err != nil {
-			panic(err)
+		if mysqlC.IsRunning() {
+			if err = mysqlC.Terminate(ctx); err != nil {
+				panic(err)
+			}
 		}
 	}
 	return mysqlC, cleanupFunc, nil
@@ -203,7 +204,7 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string) error
 	return err
 }
 
-func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
+func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Container, networkName string) (*gorm.DB, error) {
 	host, err := mysqlC.Host(ctx)
 	if err != nil {
 		return nil, err
@@ -219,34 +220,39 @@ func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Cont
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	sqlDB, err := sql.Open("mysql", cfg.FormatDSN())
+	db, err := gorm.Open(mysql2.Open(cfg.FormatDSN()))
 	if err != nil {
-		u.errLog("failed to open sql", err)
-		return nil, err
-	}
-	if err = sqlDB.Ping(); err != nil {
-		u.errLog("failed to ping sql", err)
-		for i := range 3 {
-			n := i + 1
-			fmt.Printf("retry %d\n", n)
-			sqlDB, err = sql.Open("mysql", cfg.FormatDSN())
-			if err != nil {
-				u.errLog("failed to open sql retry", err)
-				continue
-			}
-			if err = sqlDB.Ping(); err != nil {
-				u.errLog("failed to ping sql retry...", err)
-				continue
-			} else {
-				u.infoLog("success to open sql retry")
-				break
+		if mysqlC.IsRunning() {
+			if err = mysqlC.Terminate(ctx); err != nil {
+				u.errLog("failed to terminate mysql container", err)
+				return nil, err
 			}
 		}
-	}
-	db, err := gorm.Open(mysql2.New(mysql2.Config{Conn: sqlDB}))
-	if err != nil {
-		fmt.Println("failed to open gorm", err)
-		return nil, err
+		mysqlC2, cleanup, err2 := u.createMySQLContainer(ctx, networkName)
+		if err2 != nil {
+			cleanup()
+			return nil, err2
+		}
+		host2, err2 := mysqlC2.Host(ctx)
+		if err2 != nil {
+			return nil, err2
+		}
+		port2, err2 := mysqlC2.MappedPort(ctx, dbPortNat)
+		if err2 != nil {
+			return nil, err2
+		}
+		cfg2 := mysql.Config{
+			DBName:    dbName,
+			User:      "root",
+			Addr:      fmt.Sprintf("%s:%d", host2, port2.Int()),
+			Net:       "tcp",
+			ParseTime: true,
+		}
+		db, err = gorm.Open(mysql2.Open(cfg2.FormatDSN()))
+		if err != nil {
+			u.errLog("failed to retry create db connection", err)
+			return nil, err
+		}
 	}
 	db.Logger = logger.Discard
 	return db, nil
