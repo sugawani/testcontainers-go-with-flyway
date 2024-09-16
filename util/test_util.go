@@ -221,20 +221,22 @@ func (u Util) createDBConnection(ctx context.Context, mysqlC testcontainers.Cont
 	}
 	sqlDB, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
-		fmt.Println("failed to open sql", err)
+		u.errLog("failed to open sql", err)
 		return nil, err
 	}
 	if err = sqlDB.Ping(); err != nil {
-		fmt.Println("failed to ping sql", err)
+		u.errLog("failed to ping sql", err)
 		for i := range 3 {
 			n := i + 1
 			fmt.Printf("retry %d\n", n)
 			sqlDB, err = sql.Open("mysql", cfg.FormatDSN())
 			if err != nil {
-				fmt.Println("failed to open sql retry...", err)
+				u.errLog("failed to open sql retry...", err)
 				continue
+			} else {
+				u.infoLog("success to open sql retry")
+				break
 			}
-			break
 		}
 	}
 	db, err := gorm.Open(mysql2.New(mysql2.Config{Conn: sqlDB}))
