@@ -143,7 +143,7 @@ func (u Util) execFlywayContainer(ctx context.Context, networkName string) error
 					FileMode:          644,
 				},
 			},
-			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
+			WaitingFor: wait.ForLog("Successfully applied").AsRegexp(),
 		},
 		Started: true,
 	})
