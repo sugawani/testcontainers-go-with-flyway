@@ -56,9 +56,9 @@ func NewTestDB(ctx context.Context) (*sql.DB, func()) {
 	}
 	cleanupFunc := func() {
 		terminateDB()
-		if err = containerNetwork.Remove(ctx); err != nil {
-			panic(err)
-		}
+		//if err = containerNetwork.Remove(ctx); err != nil {
+		//	panic(err)
+		//}
 	}
 
 	return db, cleanupFunc
@@ -89,9 +89,9 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 
 	cleanupFunc := func() {
 		if mysqlC.IsRunning() {
-			if err = mysqlC.Terminate(ctx); err != nil {
-				panic(err)
-			}
+			//if err = mysqlC.Terminate(ctx); err != nil {
+			//	panic(err)
+			//}
 		}
 	}
 	return mysqlC, cleanupFunc, nil
