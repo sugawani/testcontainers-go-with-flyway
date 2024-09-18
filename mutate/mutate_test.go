@@ -18,7 +18,6 @@ func beforeCleanupUser(db *gorm.DB, t *testing.T) {
 }
 
 func Test_Mutate(t *testing.T) {
-	t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 	cases := map[string]struct {
 		want string
 	}{

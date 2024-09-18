@@ -18,7 +18,6 @@ func beforeCleanupUser(db *gorm.DB, t *testing.T) {
 }
 
 func Test_Query(t *testing.T) {
-	t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 	createUser := func(db *gorm.DB) {
 		db.Create(&models.User{ID: 1, Name: "name"})
 	}
