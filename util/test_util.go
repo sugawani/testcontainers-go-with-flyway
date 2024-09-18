@@ -4,15 +4,21 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"time"
 
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+type StdoutLogConsumer struct{}
+
+// Accept prints the log to stdout
+func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
+	fmt.Print(string(l.Content))
+}
 
 var (
 	dbName      = "mysql"
@@ -24,7 +30,7 @@ var (
 
 func NewTestDB(ctx context.Context) (*sql.DB, func()) {
 	// disable testcontainers log
-	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
+	//testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
@@ -70,6 +76,10 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 			Tmpfs:        map[string]string{"/var/lib/mysql": "rw"},
 			Networks:     []string{networkName},
 			WaitingFor:   wait.ForLog("port: 3306  MySQL Community Server"),
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
+				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+			},
 		},
 		Started: true,
 	})
