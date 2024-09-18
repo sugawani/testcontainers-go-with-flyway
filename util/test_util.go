@@ -16,13 +16,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type StdoutLogConsumer struct{}
-
-// Accept prints the log to stdout
-func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
-	fmt.Print(string(l.Content))
-}
-
 var (
 	dbName      = "mysql"
 	dbPort      = 3306

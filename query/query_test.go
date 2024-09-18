@@ -44,6 +44,7 @@ func Test_Query(t *testing.T) {
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
+			beforeCleanupUser(db, t)
 
 			tt.createFunc(db)
 			q := NewQuery(db)
