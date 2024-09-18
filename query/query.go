@@ -1,24 +1,26 @@
 package query
 
 import (
-	"gorm.io/gorm"
+	"database/sql"
 
 	main "github.com/sugawani/testcontainers-go-with-flyway/models"
 )
 
 type Query struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-func NewQuery(db *gorm.DB) *Query {
+func NewQuery(db *sql.DB) *Query {
 	return &Query{db: db}
 }
 
 func (q *Query) Execute(userID main.ID) (*main.User, error) {
-	var u *main.User
-	if err := q.db.First(&u, userID).Error; err != nil {
+	var u main.User
+	row := q.db.QueryRow("SELECT * FROM users WHERE id = ?", userID)
+	err := row.Scan(&u.ID, &u.Name)
+	if err != nil {
 		return nil, err
 	}
 
-	return u, nil
+	return &u, nil
 }

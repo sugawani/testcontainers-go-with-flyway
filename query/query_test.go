@@ -2,31 +2,31 @@ package query
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/gorm"
 
 	"github.com/sugawani/testcontainers-go-with-flyway/models"
 	"github.com/sugawani/testcontainers-go-with-flyway/util"
 )
 
-func beforeCleanupUser(db *gorm.DB, t *testing.T) {
-	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error; err != nil {
+func beforeCleanupUser(db *sql.DB, t *testing.T) {
+	if _, err := db.Exec("DELETE FROM users"); err != nil {
 		t.Fatal("failed to beforeCleanup", err)
 	}
 }
 
 func Test_Query(t *testing.T) {
-	createUser := func(db *gorm.DB) {
-		db.Create(&models.User{ID: 1, Name: "name"})
+	createUser := func(db *sql.DB) {
+		db.Exec("INSERT INTO users (id, name) VALUES (1, 'name')")
 	}
-	noCreateUser := func(db *gorm.DB) {}
+	noCreateUser := func(db *sql.DB) {}
 	wantErrAssertFunc := func(t assert.TestingT, err error, i ...interface{}) bool {
-		return assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+		return assert.ErrorIs(t, err, sql.ErrNoRows)
 	}
 	cases := map[string]struct {
-		createFunc func(db *gorm.DB)
+		createFunc func(db *sql.DB)
 		want       *models.User
 		assertErr  assert.ErrorAssertionFunc
 	}{

@@ -1,14 +1,15 @@
 package models
 
-type ID int
+type ID int64
 
 type User struct {
 	ID   ID
 	Name string
 }
 
-func NewUser(name string) *User {
+func NewUser(id ID, name string) *User {
 	return &User{
+		ID:   id,
 		Name: name,
 	}
 }

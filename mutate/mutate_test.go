@@ -2,17 +2,16 @@ package mutate
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/gorm"
 
-	"github.com/sugawani/testcontainers-go-with-flyway/models"
 	"github.com/sugawani/testcontainers-go-with-flyway/util"
 )
 
-func beforeCleanupUser(db *gorm.DB, t *testing.T) {
-	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error; err != nil {
+func beforeCleanupUser(db *sql.DB, t *testing.T) {
+	if _, err := db.Exec("DELETE FROM users"); err != nil {
 		t.Fatal("failed to beforeCleanup", err)
 	}
 }

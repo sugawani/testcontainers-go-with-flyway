@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 
@@ -11,9 +12,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
-	mysql2 "gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 var (
@@ -24,7 +22,7 @@ var (
 	flywayImage = "flyway/flyway:10.17.1"
 )
 
-func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
+func NewTestDB(ctx context.Context) (*sql.DB, func()) {
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
@@ -124,7 +122,7 @@ func execFlywayContainer(ctx context.Context, networkName string, dbContainerIP 
 	return err
 }
 
-func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*gorm.DB, error) {
+func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*sql.DB, error) {
 	host, err := mysqlC.Host(ctx)
 	if err != nil {
 		return nil, err
@@ -140,10 +138,9 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	db, err := gorm.Open(mysql2.New(mysql2.Config{DSN: cfg.FormatDSN()}))
+	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		return nil, err
 	}
-	db.Logger = logger.Discard
 	return db, nil
 }
