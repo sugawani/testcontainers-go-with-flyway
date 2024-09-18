@@ -2,7 +2,6 @@ package query
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,20 +48,8 @@ func Test_Query(t *testing.T) {
 			tt.createFunc(db)
 			q := NewQuery(db)
 			actual, err := q.Execute(1)
-			if !tt.assertErr(t, err) {
-				var tmp []models.User
-				db.Find(&tmp)
-				for _, u := range tmp {
-					fmt.Printf("user: %+v\n", u)
-				}
-			}
-			if !assert.Equal(t, tt.want, actual) {
-				var tmp []models.User
-				db.Find(&tmp)
-				for _, u := range tmp {
-					fmt.Printf("user: %+v\n", u)
-				}
-			}
+			tt.assertErr(t, err)
+			assert.Equal(t, tt.want, actual)
 		})
 	}
 }

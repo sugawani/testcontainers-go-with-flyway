@@ -2,7 +2,6 @@ package mutate
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,20 +37,8 @@ func Test_Mutate(t *testing.T) {
 
 			m := NewMutate(db)
 			actual, err := m.Execute(tt.want)
-			if !assert.NoError(t, err) {
-				var tmp []models.User
-				db.Find(&tmp)
-				for _, u := range tmp {
-					fmt.Printf("user: %+v\n", u)
-				}
-			}
-			if !assert.Equal(t, tt.want, actual.Name) {
-				var tmp []models.User
-				db.Find(&tmp)
-				for _, u := range tmp {
-					fmt.Printf("user: %+v\n", u)
-				}
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, actual.Name)
 		})
 	}
 }
