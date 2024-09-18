@@ -2,12 +2,9 @@ package util
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
@@ -27,36 +24,32 @@ func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
 }
 
 var (
-	dbContainerName = "mysqldb"
-	dbName          = "mysql"
-	dbPort          = 3306
-	dbPortNat       = nat.Port("3306/tcp")
-	mysqlImage      = "mysql:8.0"
-	flywayImage     = "flyway/flyway:10.17.1"
+	dbName      = "mysql"
+	dbPort      = 3306
+	dbPortNat   = nat.Port("3306/tcp")
+	mysqlImage  = "mysql:8.0"
+	flywayImage = "flyway/flyway:10.17.1"
 )
 
 func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	// disable testcontainers log
 	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
-	var (
-		containerNetwork *testcontainers.DockerNetwork
-		err              error
-	)
-	err = backoff.Retry(func() error {
-		containerNetwork, err = network.New(ctx)
-		return err
-	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 10))
+	containerNetwork, err := network.New(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	mysqlC, cleanupFunc, err := createMySQLContainer(ctx, containerNetwork.Name)
+	mysqlC, terminateDB, err := createMySQLContainer(ctx, containerNetwork.Name)
 	if err != nil {
 		panic(err)
 	}
 
-	if err = execFlywayContainer(ctx, containerNetwork.Name); err != nil {
+	mysqlIP, err := mysqlC.ContainerIP(ctx)
+	if err != nil {
+		panic(err)
+	}
+	if err = execFlywayContainer(ctx, containerNetwork.Name, mysqlIP); err != nil {
 		panic(err)
 	}
 
@@ -64,14 +57,14 @@ func NewTestDB(ctx context.Context) (*gorm.DB, func()) {
 	if err != nil {
 		panic(err)
 	}
-	cleanupF := func() {
-		cleanupFunc()
+	cleanupFunc := func() {
+		terminateDB()
 		if err = containerNetwork.Remove(ctx); err != nil {
 			panic(err)
 		}
 	}
 
-	return db, cleanupF
+	return db, cleanupFunc
 }
 
 func createMySQLContainer(ctx context.Context, networkName string) (testcontainers.Container, func(), error) {
@@ -85,10 +78,7 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 			ExposedPorts: []string{fmt.Sprintf("%d/tcp", dbPort)},
 			Tmpfs:        map[string]string{"/var/lib/mysql": "rw"},
 			Networks:     []string{networkName},
-			NetworkAliases: map[string][]string{
-				networkName: {dbContainerName},
-			},
-			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server"),
+			WaitingFor:   wait.ForLog("port: 3306  MySQL Community Server"),
 		},
 		Started: true,
 	})
@@ -97,15 +87,17 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 	}
 
 	cleanupFunc := func() {
-		if err = mysqlC.Terminate(ctx); err != nil {
-			panic(err)
+		if mysqlC.IsRunning() {
+			if err = mysqlC.Terminate(ctx); err != nil {
+				panic(err)
+			}
 		}
 	}
 	return mysqlC, cleanupFunc, nil
 }
 
-func execFlywayContainer(ctx context.Context, networkName string) error {
-	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerName, dbPort, dbName)
+func execFlywayContainer(ctx context.Context, networkName string, dbContainerIP string) error {
+	mysqlDBUrl := fmt.Sprintf("-url=jdbc:mysql://%s:%d/%s?allowPublicKeyRetrieval=true", dbContainerIP, dbPort, dbName)
 	flywayC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: flywayImage,
@@ -121,7 +113,7 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 					FileMode:          644,
 				},
 			},
-			WaitingFor: wait.ForLog("Successfully applied|No migration necessary").AsRegexp(),
+			WaitingFor: wait.ForLog("Successfully applied").WithOccurrence(1),
 		},
 		Started: true,
 	})
@@ -130,8 +122,10 @@ func execFlywayContainer(ctx context.Context, networkName string) error {
 	}
 
 	defer func() {
-		if err = flywayC.Terminate(ctx); err != nil {
-			panic(err)
+		if flywayC.IsRunning() {
+			if err = flywayC.Terminate(ctx); err != nil {
+				panic(err)
+			}
 		}
 	}()
 	return err
@@ -153,27 +147,8 @@ func createDBConnection(ctx context.Context, mysqlC testcontainers.Container) (*
 		Net:       "tcp",
 		ParseTime: true,
 	}
-	sqlDB, err := sql.Open("mysql", cfg.FormatDSN())
+	db, err := gorm.Open(mysql2.New(mysql2.Config{DSN: cfg.FormatDSN()}))
 	if err != nil {
-		fmt.Println("failed to open sql", err)
-		return nil, err
-	}
-	if err = sqlDB.Ping(); err != nil {
-		fmt.Println("failed to ping sql", err)
-		for i := range 3 {
-			n := i + 1
-			fmt.Printf("retry %d\n", n)
-			sqlDB, err = sql.Open("mysql", cfg.FormatDSN())
-			if err != nil {
-				fmt.Println("failed to open sql retry...", err)
-				continue
-			}
-			break
-		}
-	}
-	db, err := gorm.Open(mysql2.New(mysql2.Config{Conn: sqlDB}))
-	if err != nil {
-		fmt.Println("failed to open gorm", err)
 		return nil, err
 	}
 	db.Logger = logger.Discard

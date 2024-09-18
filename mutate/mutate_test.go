@@ -2,6 +2,7 @@ package mutate
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ func beforeCleanupUser(db *gorm.DB, t *testing.T) {
 }
 
 func Test_Mutate(t *testing.T) {
+	t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 	cases := map[string]struct {
 		want string
 	}{
@@ -30,15 +32,26 @@ func Test_Mutate(t *testing.T) {
 	ctx := context.Background()
 	db, cleanup := util.NewTestDB(ctx)
 	t.Cleanup(cleanup)
-
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			beforeCleanupUser(db, t)
 
 			m := NewMutate(db)
 			actual, err := m.Execute(tt.want)
-			assert.Equal(t, tt.want, actual.Name)
-			assert.NoError(t, err)
+			if !assert.NoError(t, err) {
+				var tmp []models.User
+				db.Find(&tmp)
+				for _, u := range tmp {
+					fmt.Printf("user: %+v\n", u)
+				}
+			}
+			if !assert.Equal(t, tt.want, actual.Name) {
+				var tmp []models.User
+				db.Find(&tmp)
+				for _, u := range tmp {
+					fmt.Printf("user: %+v\n", u)
+				}
+			}
 		})
 	}
 }

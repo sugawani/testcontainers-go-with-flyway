@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ func beforeCleanupUser(db *gorm.DB, t *testing.T) {
 }
 
 func Test_Query(t *testing.T) {
+	t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 	createUser := func(db *gorm.DB) {
 		db.Create(&models.User{ID: 1, Name: "name"})
 	}
@@ -37,20 +39,30 @@ func Test_Query(t *testing.T) {
 		"user not exists2": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
 		"user not exists3": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
 	}
-
 	ctx := context.Background()
 	db, cleanup := util.NewTestDB(ctx)
 	t.Cleanup(cleanup)
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			beforeCleanupUser(db, t)
 
 			tt.createFunc(db)
 			q := NewQuery(db)
 			actual, err := q.Execute(1)
-			assert.Equal(t, tt.want, actual)
-			tt.assertErr(t, err)
+			if !tt.assertErr(t, err) {
+				var tmp []models.User
+				db.Find(&tmp)
+				for _, u := range tmp {
+					fmt.Printf("user: %+v\n", u)
+				}
+			}
+			if !assert.Equal(t, tt.want, actual) {
+				var tmp []models.User
+				db.Find(&tmp)
+				for _, u := range tmp {
+					fmt.Printf("user: %+v\n", u)
+				}
+			}
 		})
 	}
 }
