@@ -28,8 +28,10 @@ func Test_Mutate(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, cleanup := util.NewTestDB(ctx)
-	t.Cleanup(cleanup)
+	db, err := util.NewTestDB(ctx)
+	if err != nil {
+		t.Fatal("failed to create test db", err)
+	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			beforeCleanupUser(db, t)
