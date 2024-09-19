@@ -4,21 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
+	"log"
 
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
-
-type StdoutLogConsumer struct{}
-
-// Accept prints the log to stdout
-func (lc *StdoutLogConsumer) Accept(l testcontainers.Log) {
-	fmt.Print(string(l.Content))
-}
 
 var (
 	dbName      = "mysql"
@@ -30,32 +24,32 @@ var (
 
 func NewTestDB(ctx context.Context) (*sql.DB, func()) {
 	// disable testcontainers log
-	//testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
+	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
 
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	mysqlC, terminateDB, err := createMySQLContainer(ctx, containerNetwork.Name)
+	mysqlC, _, err := createMySQLContainer(ctx, containerNetwork.Name)
 	if err != nil {
 		panic(err)
 	}
 
-	mysqlIP, err := mysqlC.ContainerIP(ctx)
-	if err != nil {
-		panic(err)
-	}
-	if err = execFlywayContainer(ctx, containerNetwork.Name, mysqlIP); err != nil {
-		panic(err)
-	}
+	//mysqlIP, err := mysqlC.ContainerIP(ctx)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//if err = execFlywayContainer(ctx, containerNetwork.Name, mysqlIP); err != nil {
+	//	panic(err)
+	//}
 
 	db, err := createDBConnection(ctx, mysqlC)
 	if err != nil {
 		panic(err)
 	}
 	cleanupFunc := func() {
-		terminateDB()
+		//terminateDB()
 		//if err = containerNetwork.Remove(ctx); err != nil {
 		//	panic(err)
 		//}
@@ -76,9 +70,12 @@ func createMySQLContainer(ctx context.Context, networkName string) (testcontaine
 			Tmpfs:        map[string]string{"/var/lib/mysql": "rw"},
 			Networks:     []string{networkName},
 			WaitingFor:   wait.ForLog("port: 3306  MySQL Community Server"),
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-				Consumers: []testcontainers.LogConsumer{&StdoutLogConsumer{}},
+			Files: []testcontainers.ContainerFile{
+				{
+					HostFilePath:      "../migrations/create_user.sql",
+					ContainerFilePath: "/docker-entrypoint-initdb.d/create_user.sql",
+					FileMode:          644,
+				},
 			},
 		},
 		Started: true,
