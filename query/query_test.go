@@ -37,15 +37,14 @@ func Test_Query(t *testing.T) {
 		"user not exists2": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
 		"user not exists3": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
 	}
-	ctx := context.Background()
-	db, err := util.NewTestDB(ctx)
-	if err != nil {
-		t.Fatal("failed to create test db", err)
-	}
-
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			beforeCleanupUser(db, t)
+			ctx := context.Background()
+			db, err := util.NewTestDB(ctx)
+			if err != nil {
+				t.Fatal("failed to create test db", err)
+			}
+			//beforeCleanupUser(db, t)
 
 			tt.createFunc(db)
 			q := NewQuery(db)
