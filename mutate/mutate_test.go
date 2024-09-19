@@ -27,14 +27,14 @@ func Test_Mutate(t *testing.T) {
 		"create user4": {want: "created user4"},
 	}
 
+	ctx := context.Background()
+	db, err := util.NewTestDB(ctx)
+	if err != nil {
+		t.Fatal("failed to create test db", err)
+	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			//beforeCleanupUser(db, t)
-			ctx := context.Background()
-			db, err := util.NewTestDB(ctx)
-			if err != nil {
-				t.Fatal("failed to create test db", err)
-			}
+			beforeCleanupUser(db, t)
 
 			m := NewMutate(db)
 			actual, err := m.Execute(tt.want)
