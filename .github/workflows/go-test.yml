@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feature/without_flyway
+          ref: feature/single_file
       - uses: actions/setup-go@v5
         id: setup-go
         with:
