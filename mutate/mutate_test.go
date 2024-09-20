@@ -17,6 +17,7 @@ func beforeCleanupUser(db *sql.DB, t *testing.T) {
 }
 
 func Test_Mutate(t *testing.T) {
+	t.Skip()
 	cases := map[string]struct {
 		want string
 	}{

@@ -40,6 +40,7 @@ func Test_Query(t *testing.T) {
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			//beforeCleanupUser(db, t)
 			ctx := context.Background()
 			db, cleanup := util.NewTestDB(ctx)
