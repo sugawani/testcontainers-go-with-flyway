@@ -11,11 +11,11 @@ import (
 	"github.com/sugawani/testcontainers-go-with-flyway/util"
 )
 
-func beforeCleanupUser(db *gorm.DB, t *testing.T) {
-	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error; err != nil {
-		t.Fatal("failed to beforeCleanup", err)
-	}
-}
+// func beforeCleanupUser(db *gorm.DB, t *testing.T) {
+// 	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error; err != nil {
+// 		t.Fatal("failed to beforeCleanup", err)
+// 	}
+// }
 
 func Test_Query(t *testing.T) {
 	createUser := func(db *gorm.DB) {
@@ -38,14 +38,14 @@ func Test_Query(t *testing.T) {
 		"user not exists3": {createFunc: noCreateUser, want: nil, assertErr: wantErrAssertFunc},
 	}
 	
-	ctx := context.Background()
-	db, err := util.NewTestDB(ctx)
-	if err != nil {
-		t.Fatal("failed to create test db", err)
-	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			beforeCleanupUser(db, t)
+			// beforeCleanupUser(db, t)
+			ctx := context.Background()
+			db, err := util.NewTestDB(ctx)
+			if err != nil {
+				t.Fatal("failed to create test db", err)
+			}
 
 			tt.createFunc(db)
 			q := NewQuery(db)
