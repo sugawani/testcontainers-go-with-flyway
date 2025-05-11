@@ -3,9 +3,7 @@ package util
 import (
 	"context"
 	"fmt"
-	"log"
 
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
@@ -22,13 +20,10 @@ var (
 	dbPort          = 3306
 	dbPortNat       = nat.Port("3306/tcp")
 	mysqlImage      = "mysql:8.0"
-	flywayImage     = "flyway/flyway:10.17.1"
+	flywayImage     = "flyway/flyway:11"
 )
 
 func NewTestDB(ctx context.Context) (*gorm.DB, error) {
-	// disable testcontainers log
-	testcontainers.Logger = log.New(&ioutils.NopWriter{}, "", 0)
-
 	containerNetwork, err := network.New(ctx)
 	if err != nil {
 		return nil, err

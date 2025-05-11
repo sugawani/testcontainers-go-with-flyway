@@ -5,15 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"github.com/sugawani/testcontainers-go-with-flyway/util"
 )
-
-// func beforeCleanupUser(db *gorm.DB, t *testing.T) {
-// 	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error; err != nil {
-// 		t.Fatal("failed to beforeCleanup", err)
-// 	}
-// }
 
 func Test_Mutate(t *testing.T) {
 	cases := map[string]struct {
@@ -27,7 +20,6 @@ func Test_Mutate(t *testing.T) {
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			// beforeCleanupUser(db, t)
 			ctx := context.Background()
 			db, err := util.NewTestDB(ctx)
 			if err != nil {
