@@ -3,6 +3,8 @@ name: go-test
 on:
   workflow_dispatch:
   push:
+  schedule:
+    - cron: '*/2 * * * *'
 
 jobs:
   build-and-test:
